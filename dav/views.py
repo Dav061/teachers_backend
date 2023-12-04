@@ -24,8 +24,14 @@ user= Users.objects.get(id=1)
 #GET - получить список всех опций 
 @api_view(['Get']) 
 def get_options(request, format=None): 
+    search_query = request.GET.get('search', '')
     faculty = request.GET.get('faculty', '')
-    options = Options.objects.filter(available=True)
+    
+    options = Options.objects.filter(available=True).filter(title__icontains=search_query)
+
+    if faculty and faculty != 'Любой факультет':
+        options = options.filter(faculty=faculty)
+    
     serializer = OptionSerializer(options, many=True)
     
     #Retrieve the application with customer user and status equal to 1
