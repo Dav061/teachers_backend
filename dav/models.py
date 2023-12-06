@@ -25,7 +25,7 @@ class Users(models.Model):
     login = models.CharField(max_length=20, blank=True, null=True)
     password = models.CharField(max_length=20, blank=True, null=True)
     is_moderator = models.BooleanField(blank=True, null=True)
-    fio = models.CharField(max_length=50, blank=True, null=True) 
+    fio = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta: 
         verbose_name_plural = "Users" 
@@ -43,17 +43,38 @@ class Applications(models.Model):
         (4, 'Завершен'), 
         (5, 'Отклонен'), 
     ) 
+    DAY_CHOICES = ( 
+        (1, 'Понедельник'), 
+        (2, 'Вторник'), 
+        (3, 'Среда'), 
+        (4, 'Четверг'), 
+        (5, 'Пятница'), 
+    ) 
+    TIME_CHOICES = ( 
+        (1, '8-30'), 
+        (2, '10-00'), 
+        (3, '12-00'), 
+        (4, '14-00'), 
+        (5, '18-00'), 
+    ) 
+    AUDIT_CHOICES = ( 
+        (1, '111'), 
+        (2, '222'), 
+        (3, '333'), 
+        (4, '444'), 
+        (5, '555'), 
+    )
     status = models.CharField(choices=STATUS_CHOICES,default=1,max_length=20) 
-    day_less = models.DateTimeField(blank=True, null=True)
-    time_less = models.DateTimeField(unique=True, blank=True, null=True)
-    audit_less = models.CharField(max_length=50, blank=True, null=True)
+    day_less = models.CharField(choices=DAY_CHOICES,default=1,max_length=20)
+    time_less = models.CharField(choices=TIME_CHOICES,default=1,max_length=20)
+    audit_less = models.CharField(choices=AUDIT_CHOICES,default=1,max_length=20)
     created_at = models.DateTimeField(default=timezone.now, blank=True, null=True)    
     formed_at = models.DateTimeField(blank=True, null=True) 
     completed_at = models.DateTimeField(blank=True, null=True) 
     moderator = models.ForeignKey(Users, on_delete=models.CASCADE,blank=True, null=True) 
     customer = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='applications_customer_set', blank=True, null=True) 
     
-    class Meta: 
+    class Meta:
         verbose_name_plural = "Applications" 
         managed = True 
         db_table = 'applications'
@@ -62,7 +83,6 @@ class Applications(models.Model):
 
 
 class Applicationsoptions(models.Model):
-    amount = models.IntegerField(default=1,blank=True, null=True) 
     application = models.ForeignKey(Applications, on_delete=models.CASCADE, blank=True, null=True) 
     option = models.ForeignKey(Options, on_delete=models.CASCADE, blank=True, null=True) 
 

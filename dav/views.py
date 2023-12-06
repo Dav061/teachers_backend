@@ -121,11 +121,11 @@ def delete_option(request, pk, format=None):
     serializer = OptionSerializer(options, many=True)
     return Response(serializer.data)
  
-#POST - добавить опцию в заявку(если нет открытых заявок, то создать)
+#POST - добавить услугу в заявку(если нет открытых заявок, то создать)
 @api_view(['POST'])
 def add_to_application(request, pk):
     if not Options.objects.filter(id=pk).exists():
-        return Response(f"Опции с таким id не существует!")
+        return Response(f"Услуги с таким id не существует!")
 
     option = Options.objects.get(id=pk)
 
@@ -134,11 +134,24 @@ def add_to_application(request, pk):
     if application is None:
         application = Applications.objects.create(customer_id=user.id)
 
-    amount = request.data.get("amount",1)
+    day_less = request.data.get("day_less")
+    time_less = request.data.get("time_less")
+    audit_less = request.data.get("audit_less")
+
+    existing_lessons = Applications.objects.filter(day_less=day_less, time_less=time_less)
+    
+
+
+    if existing_lessons:
+        # Заявка уже существует, выводим сообщение об ошибке
+        error_message = 'Преподаватель уже занят в выбранное время'
+        return render(request, 'add_lesson.html', {'error_message': error_message})
 
     application_option = Applicationsoptions.objects.create(
         option=option,
-        amount=amount  # Сохранение количества опций
+        day_less = day_less,
+        time_less = time_less,
+        audit_less = audit_less
     )
 
     application_option.application = application  # Устанавливаем связь с объектом Applications
@@ -174,7 +187,9 @@ def get_application(request, pk, format=None):
         for app_option in application_options:
             option_serializer = OptionSerializer(app_option.option)
             option_data = option_serializer.data
-            option_data['amount'] = app_option.amount
+            # option_data['day_less'] = app_option.day_less
+            # option_data['time_less'] = app_option.time_less
+            # option_data['audit_less'] = app_option.audit_less
             options_data.append(option_data)
         
         # Добавить данные об опциях в данные о заявке
@@ -244,7 +259,7 @@ def delete_application(request, pk, format=None):
 
 
 
-#DELETE - удалить конкретную опцию из конкретной заявки
+#DELETE - удалить конкретную услугу из конкретной заявки
 @api_view(["DELETE"])
 def delete_option_from_application(request, application_id, option_id):
     if not Applications.objects.filter(pk=application_id).exists():
@@ -262,18 +277,18 @@ def delete_option_from_application(request, application_id, option_id):
     return Response("Опция успешно удалена из заявки", status=status.HTTP_204_NO_CONTENT)
 
 
-#PUT - изменить кол-во конкретной опции в заявке
-@api_view(["PUT"])
-def update_option_amount(request, application_id, option_id):
-    if not Applications.objects.filter(pk=application_id).exists() or not Options.objects.filter(pk=option_id).exists():
-        return Response("Заявки или опции с такими id не существует", status=status.HTTP_404_NOT_FOUND)
+# #PUT - изменить кол-во конкретной опции в заявке
+# @api_view(["PUT"])
+# def update_option_amount(request, application_id, option_id):
+#     if not Applications.objects.filter(pk=application_id).exists() or not Options.objects.filter(pk=option_id).exists():
+#         return Response("Заявки или опции с такими id не существует", status=status.HTTP_404_NOT_FOUND)
 
-    application_option = Applicationsoptions.objects.filter(application_id=application_id, option_id=option_id).first()
+#     application_option = Applicationsoptions.objects.filter(application_id=application_id, option_id=option_id).first()
 
-    if not application_option:
-        return Response("В этой заявке нет такой опции", status=status.HTTP_404_NOT_FOUND)
+#     if not application_option:
+#         return Response("В этой заявке нет такой опции", status=status.HTTP_404_NOT_FOUND)
 
-    new_amount = request.data.get("amount",1)
-    application_option.amount = new_amount
-    application_option.save()
-    return Response("Amount успешно обновлен", status=status.HTTP_200_OK)
+#     new_amount = request.data.get("amount",1)
+#     application_option.amount = new_amount
+#     application_option.save()
+#     return Response("Amount успешно обновлен", status=status.HTTP_200_OK)

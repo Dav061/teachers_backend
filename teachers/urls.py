@@ -35,15 +35,15 @@ urlpatterns = [
     path(r'options/<int:pk>/delete/', views.delete_option, name='options-delete'),#PUT - удалить одну услугу - OK
     path(r'options/<int:pk>/add_to_application/', views.add_to_application, name='options-add-to-application'),#POST - добавить услугу в заявку(если нет открытых заявок, то создать) - OK
     path(r'options/<int:pk>/image/post/', views.postImageToSubscription, name="post-image-to-subscription"), #POST - MINIO - OK
-    
+        
     #APPLICATIONS 
-    path(r'applications/', views.get_applications, name='applications-list'),#GET - получить список всех заявок - OK
+    path(r'applications/', views.get_applications, name='applications-list'),#GET - получить список всех  заявок - OK
     path(r'applications/<int:pk>/', views.get_application, name='applications-detail'),#GET - получить одну заявку - OK
     path(r'applications/<int:pk>/delete/', views.delete_application),#DELETE - удалить одну заявку - OK
     path(r'applications/<int:pk>/update_by_user/', views.update_by_user, name='update_by_user'),#PUT - изменение статуса пользователем - OK
     path(r'applications/<int:pk>/update_by_admin/', views.update_by_admin, name='update_by_admin'),#PUT - изменение статуса модератором - OK
     path(r"applications/<int:application_id>/delete_option/<int:option_id>/", views.delete_option_from_application),#DELETE - удалить конкретную услугу из конкретной заявки - OK
-    path(r"applications/<int:application_id>/update_amount/<int:option_id>/", views.update_option_amount),#PUT - изменить кол-во конкретной услуги в заявке - OK
+    # path(r"applications/<int:application_id>/update_amount/<int:option_id>/", views.update_option_amount),#PUT - изменить кол-во конкретной услуги в заявке - OK
     
     
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
