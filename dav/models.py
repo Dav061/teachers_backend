@@ -50,13 +50,6 @@ class Applications(models.Model):
         (4, 'Четверг'), 
         (5, 'Пятница'), 
     ) 
-    TIME_CHOICES = ( 
-        (1, '8-30'), 
-        (2, '10-00'), 
-        (3, '12-00'), 
-        (4, '14-00'), 
-        (5, '18-00'), 
-    ) 
     AUDIT_CHOICES = ( 
         (1, '111'), 
         (2, '222'), 
@@ -64,6 +57,13 @@ class Applications(models.Model):
         (4, '444'), 
         (5, '555'), 
     )
+    TIME_CHOICES = ( 
+        (1, '8-30'), 
+        (2, '10-00'), 
+        (3, '12-00'), 
+        (4, '14-00'), 
+        (5, '18-00'), 
+    ) 
     status = models.CharField(choices=STATUS_CHOICES,default=1,max_length=20) 
     day_less = models.CharField(choices=DAY_CHOICES,default=1,max_length=20)
     time_less = models.CharField(choices=TIME_CHOICES,default=1,max_length=20)
@@ -75,7 +75,7 @@ class Applications(models.Model):
     customer = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='applications_customer_set', blank=True, null=True) 
     
     class Meta:
-        verbose_name_plural = "Applications" 
+        verbose_name_plural = "Applications"    
         managed = True 
         db_table = 'applications'
     def __str__(self):
