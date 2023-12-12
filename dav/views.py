@@ -131,27 +131,32 @@ def add_to_application(request, pk):
 
     application = Applications.objects.filter(status=1).last()
 
-    if application is None:
-        application = Applications.objects.create(customer_id=user.id)
+   
 
-    day_less = request.data.get("day_less")
-    time_less = request.data.get("time_less")
-    audit_less = request.data.get("audit_less")
+    day_lesson = request.data.get("day_lesson")
+    time_lesson = request.data.get("time_lesson")
+    audit_lesson = request.data.get("audit_lesson")
 
-    existing_lessons = Applications.objects.filter(day_less=day_less, time_less=time_less)
+
     
-
-
-    if existing_lessons:
-        # Заявка уже существует, выводим сообщение об ошибке
-        error_message = 'Преподаватель уже занят в выбранное время'
+    existing_lessons = Applications.objects.filter(day_lesson=day_lesson, time_lesson=time_lesson)
+    
+    existing_options = Applicationsoptions.objects.filter(application__in=existing_lessons, option=option) 
+    if existing_options.exists():
+        error_message = 'Опция уже добавлена в одну из существующих заявок' 
         return render(request, 'add_lesson.html', {'error_message': error_message})
 
+    if application is None:
+        application = Applications.objects.create(customer_id=user.id, day_lesson=day_lesson, time_lesson = time_lesson, audit_lesson = audit_lesson)
+
+    # if existing_lessons :
+        
+    #     # Заявка уже существует, выводим сообщение об ошибке
+    #     error_message = 'Преподаватель уже занят в выбранное время'
+    #     return render(request, 'add_lesson.html', {'error_message': error_message})
+
     application_option = Applicationsoptions.objects.create(
-        option=option,
-        day_less = day_less,
-        time_less = time_less,
-        audit_less = audit_less
+        option=option
     )
 
     application_option.application = application  # Устанавливаем связь с объектом Applications

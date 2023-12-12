@@ -64,15 +64,17 @@ class Applications(models.Model):
         (4, '14-00'), 
         (5, '18-00'), 
     ) 
-    status = models.CharField(choices=STATUS_CHOICES,default=1,max_length=20) 
-    day_less = models.CharField(choices=DAY_CHOICES,default=1,max_length=20)
-    time_less = models.CharField(choices=TIME_CHOICES,default=1,max_length=20)
-    audit_less = models.CharField(choices=AUDIT_CHOICES,default=1,max_length=20)
+    status = models.CharField(choices=STATUS_CHOICES,default=1,max_length=50) 
+
+    day_lesson = models.CharField(choices=DAY_CHOICES,default=1,max_length=20)
+    time_lesson = models.CharField(choices=TIME_CHOICES,default=1,max_length=20)
+    audit_lesson = models.CharField(choices=AUDIT_CHOICES,default=1,max_length=20)
+
     created_at = models.DateTimeField(default=timezone.now, blank=True, null=True)    
     formed_at = models.DateTimeField(blank=True, null=True) 
     completed_at = models.DateTimeField(blank=True, null=True) 
     moderator = models.ForeignKey(Users, on_delete=models.CASCADE,blank=True, null=True) 
-    customer = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='applications_customer_set', blank=True, null=True) 
+    customer = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='applications_customer_set', blank=True, null=True)
     
     class Meta:
         verbose_name_plural = "Applications"    
