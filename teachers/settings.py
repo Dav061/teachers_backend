@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+REDIS_HOST = '127.0.0.1'
+REDIS_PORT = 6379
 
 # Application definition
 
@@ -37,13 +39,25 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders',
+    
      # DRF
     'rest_framework',
+    'corsheaders',
+    'drf_yasg',
 
     # Наше приложение
     'dav',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ]
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -56,6 +70,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+CORS_ALLOWED_ORIGINS = [
+   'http://localhost:3000',
+]
 ROOT_URLCONF = 'teachers.urls'
 
 
@@ -134,6 +151,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+]
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 

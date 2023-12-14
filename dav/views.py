@@ -6,19 +6,85 @@ from .serializers import *
 from .models import * 
 from rest_framework.decorators import api_view 
 from minio import Minio
-from django.http import HttpResponseBadRequest
-from django.http import HttpResponseServerError
-from rest_framework.parsers import FileUploadParser
-from rest_framework.decorators import parser_classes
+from datetime import datetime
+from rest_framework import viewsets
+from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponse
-from rest_framework.parsers import MultiPartParser
-from rest_framework.views import APIView
-from rest_framework.parsers import FileUploadParser
-from rest_framework.decorators import parser_classes
-from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from django.views.decorators.csrf import csrf_exempt
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from .permissions import *
+from django.contrib.auth import get_user_model
+import redis
+import uuid
+from django.conf import settings
+
+
+session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
 
 user= Users.objects.get(id=1)
+
+@swagger_auto_schema(method='post', request_body=UserSerializer)
+@api_view(['Post'])
+@permission_classes([AllowAny])
+def create(request):
+    print('aaaaaaaa')
+    if Users.objects.filter(email=request.data['email']).exists():
+        return Response({'status': 'Exist'}, status=400)
+    serializer = UserSerializer(data=request.data)
+    print('sss')
+    if serializer.is_valid():
+        print(serializer.data)
+        Users.objects.create_user(email=serializer.data['email'],
+                                    password=serializer.data['password'],
+                                    is_moderator=serializer.data['is_moderator'])
+        return Response({'status': 'Success'}, status=200)
+    return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# @authentication_classes([])
+# @csrf_exempt
+@swagger_auto_schema(method='post', request_body=UserSerializer)
+@api_view(['Post'])
+@permission_classes([AllowAny])
+def login_view(request):
+    username = request.data.get('email')
+    password = request.data.get('password')
+    user = authenticate(request, email=username, password=password)
+    
+    if user is not None:
+        random_key = str(uuid.uuid4())
+        user_data = {
+            "user_id": user.id,
+            "email": user.email,
+            "is_moderator": user.is_moderator,
+            "session_id": random_key
+        }
+        session_storage.set(random_key, username)
+        response = Response(user_data, status=status.HTTP_201_CREATED)
+        response.set_cookie("session_id", random_key)
+
+        return response
+    else:
+        return Response({'status': 'Error'}, status=status.HTTP_400_BAD_REQUEST)
+
+def logout_view(request):
+    authorization_header = request.headers.get('Authorization')
+    access_token = authorization_header.split(' ')[1] if authorization_header else None
+    if access_token is None:
+        message = {"message": "Token is not found in cookie"}
+        return Response(message, status=status.HTTP_401_UNAUTHORIZED)
+    session_storage.delete(access_token)
+    response = Response({'message': 'Logged out successfully'})
+    response.delete_cookie('session_id')
+
+    return response
+
+
+
+
+
 
 
 #GET - получить список всех опций 
@@ -49,46 +115,36 @@ def get_options(request, format=None):
     
     return Response(response_data)
 
-#POST - добавить новую опцию 
+#POST - добавить новую опцию  
 @api_view(['Post']) 
-def post_option(request):     
+def post_option(request, format=None):     
     serializer = OptionSerializer(data=request.data) 
-    if serializer.is_valid(): 
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED) 
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+    if not serializer.is_valid(): 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+    new_option = serializer.save() 
+        # return Response(serializer.data, status=status.HTTP_201_CREATED)
+    client = Minio(endpoint="localhost:9000",
+               access_key='minioadmin',
+               secret_key='minioadmin',
+               secure=False)
+    i=new_option.id-1
+    try:
+        i = new_option.title
+        img_obj_name = f"{i}.png"
+        file_path = f"assets/img/{request.data.get('image')}"  
+        client.fput_object(bucket_name='img',
+                           object_name=img_obj_name,
+                           file_path=file_path)
+        new_option.image = f"http://localhost:9000/img/{img_obj_name}"
+        new_option.save()
+    except Exception as e:
+        return Response({"error": str(e)})
+    
+    
+    option = Options.objects.filter(available=True)
+    serializer = OptionSerializer(option, many=True)
+    return Response(serializer.data)
 
-@api_view(['POST'])
-@parser_classes([MultiPartParser])
-def postImageToSubscription(request, pk):
-    if 'file' in request.FILES:
-        file = request.FILES['file']
-        option = Options.objects.get(pk=pk, available=True)
-        
-        client = Minio(endpoint="localhost:9000",
-                       access_key='minioadmin',
-                       secret_key='minioadmin',
-                       secure=False)
-
-        bucket_name = 'images'
-        file_name = file.name
-        file_path = "http://localhost:9000/images/" + file_name
-        
-        try:
-            client.put_object(bucket_name, file_name, file, length=file.size, content_type=file.content_type)
-            print("Файл успешно загружен в Minio.")
-            
-            serializer = OptionSerializer(instance=option, data={'image': file_path}, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return HttpResponse('Image uploaded successfully.')
-            else:
-                return HttpResponseBadRequest('Invalid data.')
-        except Exception as e:
-            print("Ошибка при загрузке файла в Minio:", str(e))
-            return HttpResponseServerError('An error occurred during file upload.')
-
-    return HttpResponseBadRequest('Invalid request.')
 
 #GET - получить одну опцию 
 @api_view(['Get']) 

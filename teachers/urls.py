@@ -16,14 +16,31 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-
+ 
 from django.contrib import admin
 from dav import views
 from django.urls import include, path
 from rest_framework import routers
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+from django.contrib import admin
 from rest_framework import permissions
+from rest_framework import routers
 
 router = routers.DefaultRouter()
+
+schema_view = get_schema_view(
+   openapi.Info(
+      title="Snippets API",
+      default_version='v1',
+      description="Test description",
+      terms_of_service="https://www.google.com/policies/terms/",
+      contact=openapi.Contact(email="contact@snippets.local"),
+      license=openapi.License(name="BSD License"),
+   ),
+   public=True,
+   permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     #OPTIONS
@@ -34,7 +51,7 @@ urlpatterns = [
     path(r'options/<int:pk>/put/', views.put_option, name='options-put'),#PUT - обновить одну услугу - OK
     path(r'options/<int:pk>/delete/', views.delete_option, name='options-delete'),#PUT - удалить одну услугу - OK
     path(r'options/<int:pk>/add_to_application/', views.add_to_application, name='options-add-to-application'),#POST - добавить услугу в заявку(если нет открытых заявок, то создать) - OK
-    path(r'options/<int:pk>/image/post/', views.postImageToSubscription, name="post-image-to-subscription"), #POST - MINIO - OK
+    #path(r'options/<int:pk>/image/post/', views.postImageToSubscription, name="post-image-to-subscription"), #POST - MINIO - OK
         
     #APPLICATIONS 
     path(r'applications/', views.get_applications, name='applications-list'),#GET - получить список всех  заявок - OK
@@ -45,7 +62,11 @@ urlpatterns = [
     path(r"applications/<int:application_id>/delete_option/<int:option_id>/", views.delete_option_from_application),#DELETE - удалить конкретную услугу из конкретной заявки - OK
     # path(r"applications/<int:application_id>/update_amount/<int:option_id>/", views.update_option_amount),#PUT - изменить кол-во конкретной услуги в заявке - OK
     
+    path('create/',  views.create, name='create'),
+    path('login/',  views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
     
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]
