@@ -6,6 +6,7 @@ from django.contrib.auth.models import UserManager,User, PermissionsMixin, Abstr
 
 # Create your models here.
 
+
 class Options(models.Model):
     title = models.CharField(max_length=50, blank=True, null=True)
     faculty = models.CharField(max_length=100, blank=True, null=True)
@@ -33,7 +34,7 @@ class NewUserManager(UserManager):
         user.save(using=self.db)
         return user
 
-class Users(models.Model):
+class Users(AbstractBaseUser, PermissionsMixin):
     email = models.CharField(max_length=500,unique=True) 
     password = models.CharField(max_length=400, blank=True, null=True) 
     is_moderator = models.BooleanField(blank=True, null=True) 
@@ -45,7 +46,6 @@ class Users(models.Model):
     class Meta: 
         verbose_name_plural = "Users" 
         managed = True
-        db_table = 'users'
     def __str__(self): 
         return self.title
     
