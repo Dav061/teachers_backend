@@ -51,7 +51,7 @@ urlpatterns = [
     path(r'options/<int:pk>/put/', views.put_option, name='options-put'),#PUT - обновить одну услугу - OK
     path(r'options/<int:pk>/delete/', views.delete_option, name='options-delete'),#PUT - удалить одну услугу - OK
     path(r'options/<int:pk>/add_to_application/', views.add_to_application, name='options-add-to-application'),#POST - добавить услугу в заявку(если нет открытых заявок, то создать) - OK
-    path(r'options/<int:pk>/image/post', views.postImageToOption),
+    path(r'options/<int:pk>/image/post/', views.postImageToOption),
     
     #APPLICATIONS 
     path(r'applications/', views.get_applications, name='applications-list'),#GET - получить список всех  заявок - OK

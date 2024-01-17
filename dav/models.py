@@ -82,7 +82,7 @@ class Applications(models.Model):
         (5, '18-00'), 
     )
 
-    audience = models.CharField(default="306э", max_length=20, null=True)
+    audience = models.CharField(max_length=20, null=True)
 
     status = models.IntegerField(choices=STATUS_CHOICES, default=1)
     day_lesson = models.IntegerField(choices=DAY_CHOICES,default=1, null=True)

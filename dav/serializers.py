@@ -22,6 +22,7 @@ class OptionSerializer(serializers.ModelSerializer):
  
 class ApplicationSerializer(serializers.ModelSerializer):
     customer = UserAppSerializer(read_only=True)
+    moderator = UserAppSerializer(read_only=True)
     class Meta:
         # Модель, которую мы сериализуем
         model = Applications

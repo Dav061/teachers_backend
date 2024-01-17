@@ -19,8 +19,10 @@ from .permissions import *
 from django.contrib.auth import get_user_model
 import redis
 import uuid
+import requests
 from django.conf import settings
 from rest_framework.parsers import MultiPartParser
+from django.db.models import Count
 
 
 session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
@@ -151,8 +153,11 @@ def get_current_cart(request, format=None):
 def get_options(request, format=None): 
     search_query = request.GET.get('search', '')
     faculty = request.GET.get('faculty', '')
-    
-    options = Options.objects.filter(available=True).filter(title__icontains=search_query)
+    status = request.GET.get('status', '')
+    if status in ['3']:
+       options  = Options.objects.all()
+    else:
+        options = Options.objects.filter(available=True).filter(title__icontains=search_query)
 
     if faculty and faculty != 'Любой факультет':
         options = options.filter(faculty=faculty)
@@ -177,35 +182,14 @@ def get_options(request, format=None):
         return Response(result)
 
 #POST - добавить новую опцию  
-@api_view(['Post'])
-@permission_classes([IsModerator])
-def post_option(request, format=None):     
-    serializer = OptionSerializer(data=request.data) 
-    if not serializer.is_valid(): 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
-    new_option = serializer.save() 
-        # return Response(serializer.data, status=status.HTTP_201_CREATED)
-    client = Minio(endpoint="localhost:9000",
-               access_key='minioadmin',
-               secret_key='minioadmin',
-               secure=False)
-    i=new_option.id-1
-    try:
-        i = new_option.title
-        img_obj_name = f"{i}.png"
-        file_path = f"assets/img/{request.data.get('image')}"  
-        client.fput_object(bucket_name='img',
-                           object_name=img_obj_name,
-                           file_path=file_path)
-        new_option.image = f"http://localhost:9000/img/{img_obj_name}"
-        new_option.save()
-    except Exception as e:
-        return Response({"error": str(e)})
-    
-    
-    option = Options.objects.filter(available=True)
-    serializer = OptionSerializer(option, many=True)
-    return Response(serializer.data)
+@api_view(['Post']) 
+@permission_classes([AllowAny])
+def post_option(request, format=None):
+    serializer = OptionSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser])
@@ -220,9 +204,9 @@ def postImageToOption(request, pk):
                        secret_key='minioadmin',
                        secure=False)
 
-        bucket_name = 'img'
+        bucket_name = 'images'
         file_name = file.name
-        file_path = "http://localhost:9000/img/" + file_name
+        file_path = "http://localhost:9000/images/" + file_name
         
         try:
             client.put_object(bucket_name, file_name, file, length=file.size, content_type=file.content_type)
@@ -263,7 +247,7 @@ def put_option(request, pk, format=None):
  
 #PUT - удалить одну опцию 
 @api_view(['Put']) 
-@permission_classes([IsModerator])
+@permission_classes([AllowAny])
 def delete_option(request, pk, format=None):     
     if not Options.objects.filter(pk=pk).exists():
         return Response(f"Опции с таким id не существует!") 
@@ -277,7 +261,7 @@ def delete_option(request, pk, format=None):
  
 #POST - добавить услугу в заявку(если нет открытых заявок, то создать)
 @api_view(['POST'])
-@permission_classes([IsAuth])
+@permission_classes([AllowAny])
 def add_to_application(request, pk):
     access_token = request.COOKIES["access_token"]
     username = session_storage.get(access_token).decode('utf-8')
@@ -292,39 +276,12 @@ def add_to_application(request, pk):
 
     
     application = Applications.objects.filter(status=1,customer_id=user.id).last()
-   
-
-    day_lesson = request.data.get("day_lesson")
-    time_lesson = request.data.get("time_lesson")
-    audience = request.data.get("audience")
-
-
+       
     
-    existing_lessons = Applications.objects.filter(day_lesson=day_lesson, time_lesson=time_lesson)
-    
-    existing_options = Applicationsoptions.objects.filter(application__in=existing_lessons, option=option) 
-    if existing_options.exists():
-        error_message = 'Опция уже добавлена в одну из существующих заявок' 
-        return render(request, 'add_lesson.html', {'error_message': error_message})
-
     if application is None:
-        application = Applications.objects.create(customer_id=user.id, day_lesson=day_lesson, time_lesson = time_lesson, audience = audience)
+        application = Applications.objects.create(customer_id=user.id)
 
-    # if existing_lessons :
-        
-    #     # Заявка уже существует, выводим сообщение об ошибке
-    #     error_message = 'Преподаватель уже занят в выбранное время'
-    #     return render(request, 'add_lesson.html', {'error_message': error_message})
-
-    # application_option = Applicationsoptions.objects.create(
-    #     option=option
-    # )
-
-    # application_option.application = application  # Устанавливаем связь с объектом Applications
-    # application_option.save()  # Сохраняем объект Applicationsoptions
-
-    # serializer = OptionSerializer(application_option)
-    # return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
     try:
         application_option = Applicationsoptions.objects.get(application=application, option=option)
         application_option.save()
@@ -364,18 +321,19 @@ def get_applications(request, format=None):
     if username is not None and user_id is not None:
         user = Users.objects.get(email=username)
         if user.is_moderator:
-            start_day = request.GET.get('start_day')
-            end_day = request.GET.get('end_day')
             faculty = request.GET.get('faculty', '')
-            start_day = start_day.split(' ')[0:-5]
-            end_day = end_day.split(' ')[0:-5]
-            start_day = ' '.join(start_day)
-            end_day = ' '.join(end_day)
-            start_day = datetime.strptime(start_day, '%a %b %d %Y %H:%M:%S')
-            end_day = datetime.strptime(end_day, '%a %b %d %Y %H:%M:%S')    
-            applications = Applications.objects.filter(created_at__range=(start_day, end_day)).exclude(status=2).exclude(status=1)
+            start_day = request.GET.get('start_day','-1')
+            end_day = request.GET.get('end_day','-1')
+            print(start_day, end_day)
+            if not start_day:
+                start_day="1900-01-01"
+            if not end_day:
+                end_day="2200-01-01"
+            applications = Applications.objects.exclude(status=2)
             if faculty and faculty != '0':
-                applications = applications.filter(status=faculty).exclude(status=2).exclude(status=1)
+                applications = applications.filter(status=faculty).exclude(status=2)
+            if start_day and end_day:
+                applications = applications.filter(created_at__range=(start_day, end_day))
         else:
             applications = Applications.objects.filter(customer_id=user_id).exclude(status=2)
         serializer = ApplicationSerializer(applications, many=True)
@@ -406,31 +364,64 @@ def get_application(request, pk, format=None):
         return Response(application_data)
 
 
+def calc_audience(order_id): 
+    data = { 
+        "lesson_id": order_id, 
+        # "access_token": settings.REMOTE_WEB_SERVICE_AUTH_TOKEN, 
+    } 
+ 
+    requests.post("http://127.0.0.1:8080/calc_audience/", json=data, timeout=3)
+
 @api_view(["PUT"]) 
 @permission_classes([AllowAny])
-def update_by_user(request, pk): 
-    if not Applications.objects.filter(pk=pk).exists(): 
-        return Response(f"Заявки с таким id не существует!") 
- 
-    request_status = request.data["status"] 
- 
-    if int(request.data["status"]) not in [2, 3]: 
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED) 
- 
-    application = Applications.objects.get(pk=pk) 
-    app_status = application.status 
- 
-    if int(request.data["status"]) in [3]: 
-        application.formed_at=timezone.now() 
-     
- 
-    application.status = request_status 
-    application.save() 
- 
-    serializer = ApplicationSerializer(application, many=False)
-    response = Response(serializer.data)
+def update_by_user(request, pk):
+  if not Applications.objects.filter(pk=pk).exists():
+      return Response(f"Заявки с таким id не существует!")
 
+  request_status = request.data["status"]
+  if int(request_status) not in [2, 3]:
+      return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    
+  # Получить текущую заявку
+  current_application = Applications.objects.get(pk=pk)
+  
+  if int(request_status) in [2]:
+    print('AAAAAAAAAAAAAAAA')
+    current_application.status = request_status 
+    current_application.save() 
+    serializer = ApplicationSerializer(current_application, many=False)
+    response = Response(serializer.data)
     return response
+
+  # Получить опции текущей заявки
+  current_options = Applicationsoptions.objects.filter(application=current_application).values_list('option', flat=True)
+  print(request.data["date"])
+  print(request.data["time"])
+  # Проверка наличия заявки с таким же статусом, временем и датой и с общими опциями
+  existing_applications = Applications.objects.filter(
+      status=request_status,
+      day_lesson=request.data["date"],
+      time_lesson=request.data["time"],
+  ).exclude(pk=pk)
+  print(existing_applications)
+  for application in existing_applications:
+    application_options = Applicationsoptions.objects.filter(application=application).values_list('option', flat=True)
+    common_options = list(set(current_options).intersection(application_options))
+    if common_options:
+        return Response("Заявка с таким статусом, временем и датой уже существует!", status=status.HTTP_400_BAD_REQUEST)
+
+ 
+  current_application.status = request_status 
+  current_application.day_lesson = request.data["date"] 
+  current_application.time_lesson = request.data["time"] 
+  current_application.formed_at = timezone.now()
+  calc_audience(current_application.pk)
+  current_application.save() 
+ 
+  serializer = ApplicationSerializer(current_application, many=False)
+  response = Response(serializer.data)
+
+  return response
 
 
 @swagger_auto_schema(method='put',request_body=ApplicationSerializer)
@@ -452,7 +443,7 @@ def update_by_admin(request, pk):
  
     application = Applications.objects.get(pk=pk) 
     if int(request.data["status"]) in [4]: 
-        application.formed_at=timezone.now() 
+        application.completed_at=timezone.now() 
     # app_status = application.status 
  
     # if app_status == 5: 
@@ -464,7 +455,7 @@ def update_by_admin(request, pk):
 
     serializer = ApplicationSerializer(application, many=False)
     response = Response(serializer.data)
-    response.setHeader("Access-Control-Allow-Methods", "PUT")
+    # response.setHeader("Access-Control-Allow-Methods", "PUT")
     return response
 
 
