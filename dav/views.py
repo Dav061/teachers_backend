@@ -100,7 +100,7 @@ def login_view(request):
         return Response({'status': 'Error'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['Post'])
-@permission_classes([IsAuth])
+@permission_classes([AllowAny])
 def logout_view(request):
     access_token = request.COOKIES["access_token"]
     if access_token is None:
@@ -321,7 +321,7 @@ def get_applications(request, format=None):
     if username is not None and user_id is not None:
         user = Users.objects.get(email=username)
         if user.is_moderator:
-            faculty = request.GET.get('faculty', '')
+            faculty = request.GET.get('status', '')
             start_day = request.GET.get('start_day','-1')
             end_day = request.GET.get('end_day','-1')
             print(start_day, end_day)
