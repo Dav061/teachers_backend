@@ -13,10 +13,10 @@ class UserAppSerializer(serializers.ModelSerializer):
         model = Users
         fields = ['email']
 
-class OptionSerializer(serializers.ModelSerializer):
+class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         # Модель, которую мы сериализуем
-        model = Options
+        model = Teachers
         # Поля, которые мы сериализуем
         fields = "__all__"
  
@@ -29,7 +29,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
         # Поля, которые мы сериализуем
         fields = "__all__"
  
-class ApplicationsoptionsSerializer(serializers.ModelSerializer):
+class ApplicationsteachersSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Applicationsoptions
+        model = Applicationsteachers
         fields = '__all__'
