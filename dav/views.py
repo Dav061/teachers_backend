@@ -23,16 +23,16 @@ user= Users.objects.get(id=1)
 
 #GET - получить список всех опций 
 @api_view(['Get']) 
-def get_options(request, format=None): 
+def get_teachers(request, format=None): 
     search_query = request.GET.get('search', '')
     faculty = request.GET.get('faculty', '')
     
-    options = Options.objects.filter(available=True).filter(title__icontains=search_query)
+    teachers = Teachers.objects.filter(available=True).filter(title__icontains=search_query)
 
     if faculty and faculty != 'Любой факультет':
-        options = options.filter(faculty=faculty)
+        teachers = teachers.filter(faculty=faculty)
     
-    serializer = OptionSerializer(options, many=True)
+    serializer = TeacherSerializer(teachers, many=True)
     
     #Retrieve the application with customer user and status equal to 1
     application = Applications.objects.filter(customer=user, status=1).first()
@@ -44,15 +44,15 @@ def get_options(request, format=None):
     
     response_data = {
         'apps': apps_data,
-        'options': serializer.data,
+        'teachers': serializer.data,
     }
     
     return Response(response_data)
 
 #POST - добавить новую опцию 
 @api_view(['Post']) 
-def post_option(request):     
-    serializer = OptionSerializer(data=request.data) 
+def post_teacher(request):     
+    serializer = TeacherSerializer(data=request.data) 
     if serializer.is_valid(): 
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED) 
@@ -63,7 +63,7 @@ def post_option(request):
 def postImageToSubscription(request, pk):
     if 'file' in request.FILES:
         file = request.FILES['file']
-        option = Options.objects.get(pk=pk, available=True)
+        teacher = Teachers.objects.get(pk=pk, available=True)
         
         client = Minio(endpoint="localhost:9000",
                        access_key='minioadmin',
@@ -78,7 +78,7 @@ def postImageToSubscription(request, pk):
             client.put_object(bucket_name, file_name, file, length=file.size, content_type=file.content_type)
             print("Файл успешно загружен в Minio.")
             
-            serializer = OptionSerializer(instance=option, data={'image': file_path}, partial=True)
+            serializer = TeacherSerializer(instance=teacher, data={'image': file_path}, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return HttpResponse('Image uploaded successfully.')
@@ -92,17 +92,17 @@ def postImageToSubscription(request, pk):
 
 #GET - получить одну опцию 
 @api_view(['Get']) 
-def get_option(request, pk, format=None): 
-    option = get_object_or_404(Options, pk=pk) 
+def get_teacher(request, pk, format=None): 
+    teacher = get_object_or_404(Teachers, pk=pk) 
     if request.method == 'GET': 
-        serializer = OptionSerializer(option) 
+        serializer = TeacherSerializer(teacher) 
         return Response(serializer.data) 
  
 #PUT - обновить одну опцию 
 @api_view(['Put']) 
-def put_option(request, pk, format=None): 
-    option = get_object_or_404(Options, pk=pk) 
-    serializer = OptionSerializer(option, data=request.data) 
+def put_teacher(request, pk, format=None): 
+    teacher = get_object_or_404(Teachers, pk=pk) 
+    serializer = TeacherSerializer(teacher, data=request.data) 
     if serializer.is_valid(): 
         serializer.save() 
         return Response(serializer.data) 
@@ -110,24 +110,24 @@ def put_option(request, pk, format=None):
  
 #PUT - удалить одну опцию 
 @api_view(['Put']) 
-def delete_option(request, pk, format=None):     
-    if not Options.objects.filter(pk=pk).exists():
+def delete_teacher(request, pk, format=None):     
+    if not Teachers.objects.filter(pk=pk).exists():
         return Response(f"Опции с таким id не существует!") 
-    option = Options.objects.get(pk=pk)
-    option.available = False
-    option.save()
+    teacher = Teachers.objects.get(pk=pk)
+    teacher.available = False
+    teacher.save()
 
-    options = Options.objects.filter(available=True)
-    serializer = OptionSerializer(options, many=True)
+    teachers = Teachers.objects.filter(available=True)
+    serializer = TeacherSerializer(teachers, many=True)
     return Response(serializer.data)
  
 #POST - добавить услугу в заявку(если нет открытых заявок, то создать)
 @api_view(['POST'])
 def add_to_application(request, pk):
-    if not Options.objects.filter(id=pk).exists():
+    if not Teachers.objects.filter(id=pk).exists():
         return Response(f"Услуги с таким id не существует!")
 
-    option = Options.objects.get(id=pk)
+    teacher = Teachers.objects.get(id=pk)
 
     application = Applications.objects.filter(status=1).last()
 
@@ -141,8 +141,8 @@ def add_to_application(request, pk):
     
     existing_lessons = Applications.objects.filter(day_lesson=day_lesson, time_lesson=time_lesson)
     
-    existing_options = Applicationsoptions.objects.filter(application__in=existing_lessons, option=option) 
-    if existing_options.exists():
+    existing_teachers = Applicationsteachers.objects.filter(application__in=existing_lessons, teacher=teacher) 
+    if existing_teachers.exists():
         error_message = 'Опция уже добавлена в одну из существующих заявок' 
         return render(request, 'add_lesson.html', {'error_message': error_message})
 
@@ -155,14 +155,14 @@ def add_to_application(request, pk):
     #     error_message = 'Преподаватель уже занят в выбранное время'
     #     return render(request, 'add_lesson.html', {'error_message': error_message})
 
-    application_option = Applicationsoptions.objects.create(
-        option=option
+    application_teacher = Applicationsteachers.objects.create(
+        teacher=teacher
     )
 
-    application_option.application = application  # Устанавливаем связь с объектом Applications
-    application_option.save()  # Сохраняем объект Applicationsoptions
+    application_teacher.application = application  # Устанавливаем связь с объектом Applications
+    application_teacher.save()  # Сохраняем объект Applicationsteachers
 
-    serializer = OptionSerializer(application_option)
+    serializer = TeacherSerializer(application_teacher)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -186,19 +186,19 @@ def get_application(request, pk, format=None):
         serializer = ApplicationSerializer(application)
         application_data = serializer.data
 
-        # Получить связанные опции для заявки с полными данными из таблицы Options
-        application_options = Applicationsoptions.objects.filter(application=application)
-        options_data = []
-        for app_option in application_options:
-            option_serializer = OptionSerializer(app_option.option)
-            option_data = option_serializer.data
-            # option_data['day_less'] = app_option.day_less
-            # option_data['time_less'] = app_option.time_less
-            # option_data['audit_less'] = app_option.audit_less
-            options_data.append(option_data)
+        # Получить связанные опции для заявки с полными данными из таблицы Teachers
+        application_teachers = Applicationsteachers.objects.filter(application=application)
+        teachers_data = []
+        for app_teacher in application_teachers:
+            teacher_serializer = TeacherSerializer(app_teacher.teacher)
+            teacher_data = teacher_serializer.data
+            # teacher_data['day_less'] = app_teacher.day_less
+            # teacher_data['time_less'] = app_teacher.time_less
+            # teacher_data['audit_less'] = app_teacher.audit_less
+            teachers_data.append(teacher_data)
         
         # Добавить данные об опциях в данные о заявке
-        application_data['options'] = options_data
+        application_data['teachers'] = teachers_data
         
         return Response(application_data)
 
@@ -266,17 +266,17 @@ def delete_application(request, pk, format=None):
 
 #DELETE - удалить конкретную услугу из конкретной заявки
 @api_view(["DELETE"])
-def delete_option_from_application(request, application_id, option_id):
+def delete_teacher_from_application(request, application_id, teacher_id):
     if not Applications.objects.filter(pk=application_id).exists():
         return Response("Заявки с таким id не существует", status=status.HTTP_404_NOT_FOUND)
 
-    if not Options.objects.filter(pk=option_id).exists():
+    if not Teachers.objects.filter(pk=teacher_id).exists():
         return Response("Опции с таким id не существует", status=status.HTTP_404_NOT_FOUND)
 
     application = Applications.objects.get(pk=application_id)
-    option = Options.objects.get(pk=option_id)
+    teacher = Teachers.objects.get(pk=teacher_id)
 
-    application.applicationsoptions_set.filter(option=option).delete()
+    application.applicationsteachers_set.filter(teacher=teacher).delete()
     application.save()
 
     return Response("Опция успешно удалена из заявки", status=status.HTTP_204_NO_CONTENT)
@@ -284,16 +284,16 @@ def delete_option_from_application(request, application_id, option_id):
 
 # #PUT - изменить кол-во конкретной опции в заявке
 # @api_view(["PUT"])
-# def update_option_amount(request, application_id, option_id):
-#     if not Applications.objects.filter(pk=application_id).exists() or not Options.objects.filter(pk=option_id).exists():
+# def update_teacher_amount(request, application_id, teacher_id):
+#     if not Applications.objects.filter(pk=application_id).exists() or not Teachers.objects.filter(pk=teacher_id).exists():
 #         return Response("Заявки или опции с такими id не существует", status=status.HTTP_404_NOT_FOUND)
 
-#     application_option = Applicationsoptions.objects.filter(application_id=application_id, option_id=option_id).first()
+#     application_teacher = Applicationsteachers.objects.filter(application_id=application_id, teacher_id=teacher_id).first()
 
-#     if not application_option:
+#     if not application_teacher:
 #         return Response("В этой заявке нет такой опции", status=status.HTTP_404_NOT_FOUND)
 
 #     new_amount = request.data.get("amount",1)
-#     application_option.amount = new_amount
-#     application_option.save()
+#     application_teacher.amount = new_amount
+#     application_teacher.save()
 #     return Response("Amount успешно обновлен", status=status.HTTP_200_OK)

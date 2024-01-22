@@ -5,7 +5,7 @@ from django.utils import timezone
 
 # Create your models here.
 
-class Options(models.Model):
+class Teachers(models.Model):
     title = models.CharField(max_length=50, blank=True, null=True)
     faculty = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True, null=True) 
@@ -14,9 +14,9 @@ class Options(models.Model):
     available = models.BooleanField(blank=True, null=True)
 
     class Meta:
-        verbose_name_plural = "Options"
+        verbose_name_plural = "Teachers"
         managed = True
-        db_table = 'options'
+        db_table = 'teachers'
     def __str__(self):
         return self.title
     
@@ -84,12 +84,12 @@ class Applications(models.Model):
         return self.title
 
 
-class Applicationsoptions(models.Model):
+class Applicationsteachers(models.Model):
     application = models.ForeignKey(Applications, on_delete=models.CASCADE, blank=True, null=True) 
-    option = models.ForeignKey(Options, on_delete=models.CASCADE, blank=True, null=True) 
+    teacher = models.ForeignKey(Teachers, on_delete=models.CASCADE, blank=True, null=True) 
 
     class Meta:
-        verbose_name_plural = "Applicationsoptions"
+        verbose_name_plural = "Applicationsteachers"
         managed = True
-        db_table = 'applicationsoptions'
-        unique_together = (('application', 'option'),)
+        db_table = 'applicationsteachers'
+        unique_together = (('application', 'teacher'),)
